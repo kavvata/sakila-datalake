@@ -1,0 +1,133 @@
+services:
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: unidata_airflow
+    user: root
+    environment:
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS=${AIRFLOW_ADMIN_USER:-airflow}:admin
+      - PIPELINE_ENV=dev
+      - HOME=/home/airflow
+      - UNIDATA_REPO_DIR=/opt/spark/work-dir
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+    ports:
+      - "8080:8080"
+    volumes:
+      - airflow_home:/opt/airflow
+      - ./dags:/opt/airflow/dags
+      - .:/opt/spark/work-dir
+      - ./docker/airflow/entrypoint.sh:/entrypoint.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: /entrypoint.sh
+    command:
+      - -c
+      - |
+        set -e
+        airflow db migrate
+        PW_FILE="/opt/airflow/simple_auth_manager_passwords.json.generated"
+        if [ ! -f "$$PW_FILE" ]; then
+          printf '{"%s": "%s"}\n' "${AIRFLOW_ADMIN_USER:-airflow}" "${AIRFLOW_ADMIN_PASSWORD:-airflow}" > "$$PW_FILE"
+        fi
+        exec airflow standalone
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -fsS http://localhost:8080/health/livez || exit 1"]
+      interval: 30s
+      retries: 5
+      start_period: 90s
+
+  postgres:
+    image: postgres:16
+    container_name: unidata_postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-sakila}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      # demo local: auth host em trust para evitar o quarkus do Nessie ter que
+      # injetar senha no datasource
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # 00-* roda antes do init do DB: cria o user/DB do Nessie; reusa este
+      # container para manter o stack leve
+      - ./docker/postgres/00-create-nessie.sql:/docker-entrypoint-initdb.d/00-create-nessie.sql:ro
+      - ./docker/postgres/postgres-sakila-schema.sql:/docker-entrypoint-initdb.d/10-sakila-schema.sql:ro
+      - ./docker/postgres/postgres-sakila-insert-data.sql:/docker-entrypoint-initdb.d/20-sakila-data.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sakila} || exit 1",
+        ]
+      interval: 10s
+      retries: 5
+      start_period: 15s
+
+  # single-node; mesma imagem/tag do k8s (quay.io/minio/minio tornou-se
+  # privado no pull 401, por isso o mirror comunitario pgsty/minio)
+  minio:
+    image: docker.io/pgsty/minio:RELEASE.2026-02-14T12-00-00Z
+    container_name: unidata_minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-unidata}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-supersenha}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    # a imagem nao tem curl/wget/mc; bash /dev/tcp e o probe disponivel
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9000' || exit 1"]
+      interval: 10s
+      retries: 5
+      start_period: 15s
+
+  # cria o bucket do warehouse no boot; --ignore-existing + || true deixam
+  # o boot idempotente
+  create-warehouse:
+    image: docker.io/pgsty/mc:RELEASE.2026-03-13T08-57-32Z
+    container_name: unidata_create_warehouse
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: sh -c "bash -c 'until exec 3</dev/tcp/minio/9000 2>/dev/null; do sleep 2; done' && mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-unidata} ${MINIO_SECRET_KEY:-supersenha} && mc mb --ignore-existing local/warehouse || true"
+
+  nessie:
+    image: ghcr.io/projectnessie/nessie:0.109.0
+    container_name: unidata_nessie
+    depends_on:
+      postgres:
+        condition: service_healthy
+      create-warehouse:
+        condition: service_completed_successfully
+    environment:
+      # store JDBC + datasource nomeado 'postgresql' (o chart deriva o nome
+      # do datasource do scheme da URL — ver nessie.dbKind). Com host em
+      # trust (demo) nao precisa de senha; user vai na URL.
+      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL=jdbc:postgresql://postgres:5432/nessie-postgres?user=nessie
+      - NESSIE_VERSION_STORE_TYPE=JDBC
+      - NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE=postgresql
+      - NESSIE_SERVER_DEFAULT_BRANCH=dev
+    ports:
+      - "19120:19120"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:19120/api/v1/config || exit 1",
+        ]
+      interval: 15s
+      retries: 10
+      start_period: 90s
+
+volumes:
+  airflow_home:
+  postgres_data:
+  minio_data:

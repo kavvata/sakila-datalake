@@ -1,0 +1,3 @@
+# versões validadas no container do airflow
+jupyter==1.1.1
+nbconvert==7.17.1
