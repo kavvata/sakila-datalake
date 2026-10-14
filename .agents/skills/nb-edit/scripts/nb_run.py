@@ -213,7 +213,7 @@ def main() -> None:
     ap.add_argument("notebook")
     ap.add_argument("--url", default="http://localhost:8888")
     ap.add_argument("--token", default=os.environ.get("JUPYTER_TOKEN", ""))
-    ap.add_argument("--python-path", default="/workspace/scripts")
+    ap.add_argument("--python-path", default="/opt/spark/scripts")
     ap.add_argument("--cell", type=int, action="append", dest="cells", default=None,
                     help="cell index (repeatable); default all code cells")
     ap.add_argument("--timeout", type=float, default=300.0)

@@ -7,11 +7,6 @@ authors = [
     { name = "kavvata", email = "gabriel.kawata@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
-
-[project.scripts]
-datalake-example = "datalake_example:main"
-
-[build-system]
-requires = ["uv_build>=0.12.17,<0.13.0"]
-build-backend = "uv_build"
+dependencies = [
+    "pyspark>=4.2.0",
+]

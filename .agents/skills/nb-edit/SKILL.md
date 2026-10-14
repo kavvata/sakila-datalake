@@ -11,7 +11,7 @@ preserves cell ids, metadata, and outputs.
 
 ## Environment
 
-- Run everything from the repo root with `uv run ...` (uses the repo `.venv`, Python 3.10).
+- Run everything from the repo root with `uv run ...` (uses the repo `.venv`, Python 3.14).
 - Dev packages for this workflow (already in `[dependency-groups].dev` in `pyproject.toml`):
   `nbformat` (read/validate/write), `nbclient` (execute), `nbconvert` (convert/execute),
   `websocket-client` (talk to the Jupyter server kernel channel). `ipykernel` is in the
@@ -49,8 +49,9 @@ uv run python $NB validate  <nb.ipynb> [more.ipynb ...]    # validate without mo
    Caveat: notebooks saved by older Jupyter versions may have non-canonical key
    order inside cells; the first save normalizes the order (content-identical,
    one-time mechanical diff) and is safe to commit.
-4. **CI conversion check** (mandatory for notebooks under `scripts/`): CI nbconverts
-   every notebook in place and the generated `.py` is what Spark executes. Verify the
+4. **Conversion check** (mandatory for notebooks under `scripts/`): the airflow
+   entrypoint (`docker/airflow/entrypoint.sh`) nbconverts every notebook in
+   place on startup and the generated `.py` is what Spark executes. Verify the
    conversion still produces valid Python without polluting the repo:
    ```bash
    uv run jupyter nbconvert --to python --stdout scripts/.../<nb>.ipynb > /tmp/<nb>_check.py
@@ -60,8 +61,9 @@ uv run python $NB validate  <nb.ipynb> [more.ipynb ...]    # validate without mo
    (they are gitignored under `scripts/{bronze,silver,gold}/**`).
 5. **Runtime check on the compose Jupyter server** (recommended whenever a cell's
    logic changed and the notebook is meant to run): execute the cells in the Jupyter
-   container from `docker-compose.yml` (same Spark env, repo mounted at `/workspace`,
-   env vars from `.env`). Start it if it is not up:
+   container from `docker-compose.yml` (same Spark env, repo mounted at
+   `/opt/spark/work-dir`, env vars from `.env`). Build the images first
+   (`make build-images`), then start it if it is not up:
    ```bash
    docker compose up -d jupyter        # or: make up-nb
    ```

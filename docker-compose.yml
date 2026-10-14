@@ -12,6 +12,9 @@ services:
       - PIPELINE_ENV=dev
       - HOME=/home/airflow
       - UNIDATA_REPO_DIR=/opt/spark/work-dir
+      # rede default do compose project; o job Spark resolve nessie/minio/
+      # postgres por nome de servico (ver dags/utils/dev_spark_run.sh)
+      - SPARK_JOB_NETWORK=datalake-example_default
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
     ports:
       - "8080:8080"
@@ -38,6 +41,36 @@ services:
       interval: 30s
       retries: 5
       start_period: 90s
+
+  jupyter:
+    image: unidata-jupyter:4.1.2
+    build:
+      context: .
+      dockerfile: docker/jupyter/Dockerfile
+    container_name: unidata_jupyter
+    ports:
+      - "8888:8888"
+    working_dir: /opt/spark/work-dir
+    volumes:
+      - .:/opt/spark/work-dir
+      - ./scripts:/opt/spark/scripts
+    user: "1000:1000"
+    env_file: .env
+    environment:
+      - HOME=/home/jupyter
+      - PYTHONPATH=/opt/spark/scripts:/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nessie:
+        condition: service_healthy
+      create-warehouse:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8888/api || exit 1"]
+      interval: 30s
+      retries: 5
+      start_period: 60s
 
   postgres:
     image: postgres:16

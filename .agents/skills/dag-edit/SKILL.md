@@ -8,10 +8,12 @@ description: Wire Spark scripts/notebooks into Airflow DAGs in this repo — cre
 ## Environment
 
 - Run everything from the repo root with `uv run ...` (uses the repo `.venv`,
-  Python 3.10). Never use system `python3` for validation — packages like
+  Python 3.14). Never use system `python3` for validation — packages like
   `pyyaml` live in the uv env, not system Python.
 - `pyyaml` (parse manifests) is in `[dependency-groups].dev` in `pyproject.toml`.
   If you need another package: `uv add --dev <pkg>` (keeps `uv.lock` in sync).
+- Spark images: `make build-images` builds the chain base -> spark -> jupyter
+  (the operator runs jobs in `unidata-spark:4.1.2`).
 
 ## Helper script
 
@@ -28,8 +30,7 @@ starts with `local:///opt/spark/scripts/` and its basename is the app name with
 `-` → `_` plus `.py`; the CI source script (`.ipynb` or `.py`) exists under
 `scripts/` in the repo; required spec keys present (`type`, `mode`, `image`,
 `mainApplicationFile`, `sparkVersion`, `driver`, `executor`). Exit 1 on any
-failure. Note: pre-existing manifests may violate the name-matching rules —
-don't mass-fix them unless asked.
+failure.
 
 ## Add a script to a DAG
 
@@ -39,12 +40,12 @@ When asked `add <script> to <dag>` (e.g. `add scripts/gold/proplan/turmas/cria_t
 
 2. **Create the SparkApplication manifest** at `<dag_dir>/spark-apps/<app-name>.yaml` (the DAG folder, e.g. `dags/gold/evasao/spark-apps/`), modeled on an existing manifest in that folder. Conventions:
    - `<app-name>` is the script file name with `_` → `-` (e.g. `cria_tbl_matriculas_turma.ipynb` → `cria-tbl-matriculas-turma`).
-   - `mainApplicationFile` points to the **CI-generated** `.py` file: `local:///opt/spark/scripts/<subdir>/<script_name>.py`. Assume CI nbconverts every `.ipynb` under `scripts/` to `.py` in place (`make convert`); do **not** create the `.py` by hand.
+   - `mainApplicationFile` points to the **CI-generated** `.py` file: `local:///opt/spark/scripts/<subdir>/<script_name>.py`. The airflow entrypoint (`docker/airflow/entrypoint.sh`) nbconverts every `.ipynb` under `scripts/` to `.py` in place on startup; do **not** create the `.py` by hand.
    - Keep the same image, sparkConf, driver/executor, and env blocks as the sibling manifests.
 
 3. **Align the notebook session name**: the first cell's `cria_spark_session("<name>")` must match the app name (dashes). Fix a mismatched/copied session name (e.g. a session name inherited from another script). For notebook edits, use the `nb-edit` skill.
 
-4. **Register the task in the DAG**: add a `get_spark_operator` task with `task_id="cria_<name>"`, `application_file="spark-apps/<app-name>.yaml"`, `kubernetes_conn_id="kubernetes_default"`, and insert it into the existing dependency chain (after the namespace setup task, before the `_ready` outlet task) alongside sibling table tasks.
+4. **Register the task in the DAG**: add a `get_spark_operator` task with `task_id="cria_<name>"`, `application_file="spark-apps/<app-name>.yaml"`, and insert it into the existing dependency chain (after the namespace setup task, before the `_ready` outlet task) alongside sibling table tasks. In this demo the operator runs the script locally: a `BashOperator` that launches the script inside the `unidata-spark:4.1.2` image via `dags/utils/dev_spark_run.sh` (docker socket) — no k8s args (`kubernetes_conn_id` etc. are dropped).
 
 5. **Validate**: confirm the DAG file parses (`uv run python -c "import ast; ast.parse(open('<dag>').read())"`), run the manifest checker (`uv run python $CHK <new-manifest>`), and, for notebook edits, that the JSON still loads (see the `nb-edit` skill).
 
