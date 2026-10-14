@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
 """Safe Jupyter notebook (.ipynb) editor built on nbformat.
 
-Every write command validates the notebook before saving, so an invalid
-file is never written to disk. Run from the repo root with:
+Notebooks are edited by round-tripping them through markdown:
 
-    uv run python .agents/skills/nb-edit/scripts/nb_edit.py <command> ...
+    uv run python .agents/skills/nb-edit/scripts/nb_edit.py convert <nb.ipynb> <nb.md>
+    edit <nb.md>
+    uv run python .agents/skills/nb-edit/scripts/nb_edit.py convert <nb.md> <nb.ipynb>
+
+```python fenced blocks become code cells, all other text becomes markdown
+cells. Every write validates the notebook before saving, so an invalid file
+is never written to disk. Run from the repo root.
 
 Commands:
-    show           list cells (index, type, first line)
-    cell           print one cell's full source
-    set            replace a cell's source (from file or stdin via -)
-    insert         insert a new code/markdown cell after a given index
-    delete         delete a cell
-    clear-outputs  remove outputs and execution counts (all code cells)
-    set-session    fix the cria_spark_session("<name>") app name
+    convert        convert between .md and .ipynb, direction by input extension
     validate       validate one or more notebooks without modifying them
 """
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 
 import nbformat
@@ -63,104 +61,63 @@ def read_source(arg: str) -> str:
         return fh.read()
 
 
-def idx(nb: nbformat.NotebookNode, i: int) -> int:
-    n = len(nb.cells)
-    if i < 0:
-        i += n
-    if not 0 <= i < n:
-        sys.exit(f"error: cell index {i} out of range (notebook has {n} cells)")
-    return i
+def parse_md(src: str) -> list[tuple[str, str]]:
+    """Split markdown into (cell_type, text) blocks: ```python fenced blocks
+    become code cells, all other text becomes markdown cells (blank-only
+    markdown blocks are dropped). Exits on an unclosed fence."""
+    blocks: list[tuple[str, str]] = []
+    md_lines: list[str] = []
+    code_lines: list[str] = []
+    in_code = False
+    for line in src.splitlines():
+        stripped = line.strip()
+        if in_code:
+            if stripped == "```":
+                blocks.append(("code", "".join(code_lines)))
+                in_code = False
+            else:
+                code_lines.append(line + "\n")
+        elif stripped.removeprefix("```") == "python":
+            blocks.append(("markdown", "".join(md_lines)))
+            md_lines, code_lines = [], []
+            in_code = True
+        else:
+            md_lines.append(line + "\n")
+    if in_code:
+        sys.exit("error: unclosed ```python fence; refusing to write notebook")
+    blocks.append(("markdown", "".join(md_lines)))
+    return [(kind, text.strip("\n")) for kind, text in blocks if text.strip("\n")]
 
 
-def cmd_show(nb: nbformat.NotebookNode, _args) -> None:
+def nb_to_md(nb: nbformat.NotebookNode) -> str:
+    """Export cells as markdown: markdown cells as-is, code cells wrapped in
+    ```python fences (inverse of parse_md)."""
+    parts = []
+    for cell in nb.cells:
+        src = cell_src(cell).strip("\n")
+        if cell.cell_type == "code":
+            parts.append(f"```python\n{src}\n```\n")
+        else:
+            parts.append(src + "\n")
+    return "\n".join(parts)
+
+
+def cmd_convert(nb: nbformat.NotebookNode | None, args) -> None:
+    if args.source.endswith(".ipynb"):
+        with open(args.target, "w", encoding="utf-8") as fh:
+            fh.write(nb_to_md(nb))
+        print(f"ok: {args.target} ({len(nb.cells)} cells -> markdown)")
+        return
+    nb = nbformat.v4.new_notebook()
+    nb["metadata"] = {"language_info": {"name": "python"}}  # repo convention
+    for kind, text in parse_md(read_source(args.source)):
+        cell = new_code_cell() if kind == "code" else new_markdown_cell()
+        set_src(cell, text)
+        nb.cells.append(cell)
+    save(nb, args.target)
     for i, cell in enumerate(nb.cells):
         first = next((l for l in cell_src(cell).splitlines() if l.strip()), "")
-        extra = ""
-        if cell.cell_type == "code" and cell.get("execution_count") is not None:
-            extra = f" [exec {cell['execution_count']}]"
-        print(f"{i:>3} {cell.cell_type:<8} {first[:70]}{extra}")
-
-
-def cmd_cell(nb: nbformat.NotebookNode, args) -> None:
-    i = idx(nb, args.index)
-    sys.stdout.write(cell_src(nb.cells[i]))
-
-
-def cmd_set(nb: nbformat.NotebookNode, args) -> None:
-    i = idx(nb, args.index)
-    set_src(nb.cells[i], read_source(args.source))
-    save(nb, args.notebook)
-
-
-def cmd_insert(nb: nbformat.NotebookNode, args) -> None:
-    if args.after is None:
-        pos = len(nb.cells)
-    else:
-        pos = idx(nb, args.after) + 1
-    source = read_source(args.source) if args.source else ""
-    cell = new_markdown_cell(source) if args.type == "markdown" else new_code_cell(source)
-    nb.cells.insert(pos, cell)
-    save(nb, args.notebook)
-
-
-def cmd_delete(nb: nbformat.NotebookNode, args) -> None:
-    i = idx(nb, args.index)
-    del nb.cells[i]
-    save(nb, args.notebook)
-
-
-def cmd_clear_outputs(nb: nbformat.NotebookNode, args) -> None:
-    for cell in nb.cells:
-        if cell.cell_type == "code":
-            cell["outputs"] = []
-            cell["execution_count"] = None
-    save(nb, args.notebook)
-
-
-def cmd_set_session(nb: nbformat.NotebookNode, args) -> None:
-    """Rewrite the app name passed to cria_spark_session in the first
-    matching code cell. Handles both patterns used in this repo:
-
-        spark = cria_spark_session("app-name")
-        SPARK_APP_NAME = "app-name"
-        spark = cria_spark_session(SPARK_APP_NAME)
-    """
-    literal = re.compile(r"cria_spark_session\(\s*['\"]([^'\"]+)['\"]\s*\)")
-    for cell in nb.cells:
-        if cell.cell_type != "code":
-            continue
-        src = cell_src(cell)
-        m = literal.search(src)
-        if m:
-            set_src(
-                cell,
-                re.sub(
-                    literal,
-                    lambda mm: mm.group(0).replace(mm.group(1), args.name),
-                    src,
-                    count=1,
-                ),
-            )
-            save(nb, args.notebook)
-            return
-    var = re.compile(r"(SPARK_APP_NAME\s*=\s*['\"])([^'\"]+)(['\"])")
-    for cell in nb.cells:
-        if cell.cell_type != "code":
-            continue
-        src = cell_src(cell)
-        if var.search(src):
-            set_src(
-                cell,
-                re.sub(
-                    var,
-                    lambda mm: f"{mm.group(1)}{args.name}{mm.group(3)}",
-                    src,
-                    count=1,
-                ),
-            )
-            save(nb, args.notebook)
-            return
-    sys.exit("error: no cria_spark_session('...') or SPARK_APP_NAME = '...' found in code cells")
+        print(f"{i:>3} {cell.cell_type:<8} {first[:70]}")
 
 
 def cmd_validate(_nb: nbformat.NotebookNode, args) -> None:
@@ -183,34 +140,9 @@ def main() -> None:
         p.set_defaults(fn=fn)
         return p
 
-    p = make("show", cmd_show)
-    p.add_argument("notebook")
-
-    p = make("cell", cmd_cell)
-    p.add_argument("notebook")
-    p.add_argument("index", type=int)
-
-    p = make("set", cmd_set)
-    p.add_argument("notebook")
-    p.add_argument("index", type=int)
-    p.add_argument("source", help="new cell source (file, or - for stdin)")
-
-    p = make("insert", cmd_insert)
-    p.add_argument("notebook")
-    p.add_argument("source", nargs="?", default=None, help="cell source (file, or - for stdin)")
-    p.add_argument("--after", type=int, default=None, help="insert after this cell index (default: append)")
-    p.add_argument("--type", choices=["code", "markdown"], default="code")
-
-    p = make("delete", cmd_delete)
-    p.add_argument("notebook")
-    p.add_argument("index", type=int)
-
-    p = make("clear-outputs", cmd_clear_outputs)
-    p.add_argument("notebook")
-
-    p = make("set-session", cmd_set_session)
-    p.add_argument("notebook")
-    p.add_argument("name")
+    p = make("convert", cmd_convert)
+    p.add_argument("source", help="input .md (or - for stdin) or .ipynb")
+    p.add_argument("target", help="output .ipynb (from .md) or .md (from .ipynb)")
 
     p = make("validate", cmd_validate)
     p.add_argument("notebooks", nargs="+")
@@ -220,8 +152,7 @@ def main() -> None:
     if args.command == "validate":
         args.fn(None, args)
         return
-
-    nb = load(args.notebook)
+    nb = load(args.source) if args.source.endswith(".ipynb") else None
     args.fn(nb, args)
 
 

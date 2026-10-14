@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Execute notebook cells on the docker-compose Jupyter server.
 
-Connects to a Jupyter server (expects a jupyter container in this project's
-compose; default http://localhost:8888, token disabled), starts a `python3` kernel, executes the notebook's code cells one by one,
+Connects to the Jupyter server started by `docker compose up -d jupyter`
+(default http://localhost:8888, token disabled in docker/jupyter/Dockerfile),
+starts a `python3` kernel, executes the notebook's code cells one by one,
 and reports per-cell status/outputs. The kernel runs inside the compose
 Jupyter container, so it has the same Spark environment and the repo mount
 at /workspace.
