@@ -6,6 +6,11 @@ dist/
 wheels/
 *.egg-info
 
+# notebooks convertidos pelo entrypoint do airflow (nbconvert in place)
+scripts/bronze/**/*.py
+scripts/silver/**/*.py
+scripts/gold/**/*.py
+
 # Virtual environments
 .venv
 
