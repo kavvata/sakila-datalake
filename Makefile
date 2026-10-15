@@ -2,7 +2,7 @@
 BASE_TAG := 4.1.2
 CONCURRENCY ?= $(shell nproc)
 
-.PHONY: build-images up up-nb down nuke convert docker-nbconvert
+.PHONY: build-images up up-nb down sync-raw nuke convert docker-nbconvert
 
 build-images:
 	docker build -t unidata-spark-base:$(BASE_TAG) -f docker/base/Dockerfile .
@@ -17,6 +17,10 @@ up-nb:
 
 down:
 	docker compose down
+
+## Sincroniza ./raw com o bucket 'raw' do MinIO (mc na imagem do compose; nao remove objetos extra no bucket)
+sync-raw:
+	docker run --rm --entrypoint sh --network datalake-example_default -v "$$PWD/raw:/raw:ro" docker.io/pgsty/mc:RELEASE.2026-03-13T08-57-32Z -c "mc alias set local http://minio:9000 '$${MINIO_ACCESS_KEY:-unidata}' '$${MINIO_SECRET_KEY:-supersenha}' && mc mb --ignore-existing local/raw && mc mirror /raw local/raw"
 
 ## Conversão local notebooks→python em paralelo (mesma lógica do CI)
 convert: docker-nbconvert
