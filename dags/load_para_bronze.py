@@ -14,7 +14,6 @@ from utils.operators import get_spark_operator
 with DAG(
     dag_id="load_para_bronze",
     description="Extrai as tabelas sakila (Postgres) para a camada bronze (Nessie/Iceberg)",
-    schedule="0 6 * * *",
     start_date=datetime(2026, 10, 14),
     catchup=False,
     tags=["bronze", "sakila"],

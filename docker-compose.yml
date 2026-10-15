@@ -168,7 +168,7 @@ services:
       - "127.0.0.1:9047:9047"
       - "127.0.0.1:31010:31010"
     volumes:
-      - dremio_data:/var/lib/dremio
+      - dremio_data:/opt/dremio/data
     depends_on:
       minio:
         condition: service_healthy
