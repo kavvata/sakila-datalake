@@ -18,9 +18,9 @@ up-nb:
 down:
 	docker compose down
 
-## Sincroniza ./raw com o bucket 'raw' do MinIO (mc na imagem do compose; nao remove objetos extra no bucket)
+## Sincroniza ./raw com o bucket 'raw' do MinIO (servico one-shot do compose; nao remove objetos extra no bucket)
 sync-raw:
-	docker run --rm --entrypoint sh --network sakila-datalake_default -v "$$PWD/raw:/raw:ro" docker.io/pgsty/mc:RELEASE.2026-03-13T08-57-32Z -c "mc alias set local http://minio:9000 '$${MINIO_ACCESS_KEY:-unidata}' '$${MINIO_SECRET_KEY:-supersenha}' && mc mb --ignore-existing local/raw && mc mirror /raw local/raw"
+	docker compose run --rm sync-raw
 
 ## Conversão local notebooks→python em paralelo (mesma lógica do CI)
 convert: docker-nbconvert
@@ -36,4 +36,4 @@ docker-nbconvert:
 
 nuke:
 	docker compose down
-	docker volume ls -q --filter name=sakila-datalake_ | grep -v dremio_data | xargs -r docker volume rm
+	docker volume ls -q --filter name=sakila-datalake_ | grep -v -e dremio_data -e metabase_data | xargs -r docker volume rm

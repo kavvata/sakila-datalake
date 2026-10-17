@@ -136,6 +136,17 @@ services:
         condition: service_healthy
     entrypoint: sh -c "bash -c 'until exec 3</dev/tcp/minio/9000 2>/dev/null; do sleep 2; done' && mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-unidata} ${MINIO_SECRET_KEY:-supersenha} && mc mb --ignore-existing local/warehouse || true"
 
+  # espelha ./raw para o bucket 'raw' no boot; nao remove objetos extra no bucket
+  sync-raw:
+    image: docker.io/pgsty/mc:RELEASE.2026-03-13T08-57-32Z
+    container_name: unidata_sync_raw
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./raw:/raw:ro
+    entrypoint: sh -c "mc alias set local http://minio:9000 ${MINIO_ACCESS_KEY:-unidata} ${MINIO_SECRET_KEY:-supersenha} && mc mb --ignore-existing local/raw && mc mirror /raw local/raw"
+
   nessie:
     image: ghcr.io/projectnessie/nessie:0.109.0
     container_name: unidata_nessie
