@@ -178,6 +178,39 @@ services:
       retries: 20
       start_period: 120s
 
+  # Trino standalone (coordinator + worker); le as tabelas Iceberg do
+  # warehouse pelo catalog Nessie — mesma URI/branch/warehouse dos jobs
+  # Spark (ver dags/utils/dev_spark_run.sh). UI/CLI no 8081 do host.
+  # O etc/ local substitui o default da imagem; as chaves S3 sao injetadas
+  # como env (o catalogo usa ${ENV:}, resolvido pelo proprio Trino).
+  trino:
+    image: trinodb/trino:483
+    container_name: unidata_trino
+    # sem limite, o MaxRAMPercentage=80 do jvm.config da imagem pegaria 80%
+    # da RAM do host (6G); 2G -> heap ~1.6G, suficiente p/ dev
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-unidata}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-supersenha}
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - ./docker/trino/etc:/etc/trino:ro
+    depends_on:
+      nessie:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    # /v1/info soa 503 ate o server subir (mesma imagem ja tem curl)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/v1/info || exit 1"]
+      interval: 15s
+      retries: 10
+      start_period: 60s
+
   metabase:
     image: unidata-metabase:4.1.2
     build:
