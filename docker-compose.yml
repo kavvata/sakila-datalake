@@ -216,10 +216,7 @@ services:
       start_period: 60s
 
   metabase:
-    image: unidata-metabase:4.1.2
-    build:
-      context: .
-      dockerfile: docker/metabase/Dockerfile
+    image: metabase/metabase:v0.65.0.x
     container_name: unidata_metabase
     environment:
       # H2 fica dentro do volume /metabase/data (padrao seria /metabase.db,

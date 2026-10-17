@@ -8,7 +8,6 @@ build-images:
 	docker build -t unidata-spark-base:$(BASE_TAG) -f docker/base/Dockerfile .
 	docker build -t unidata-spark:$(BASE_TAG) -f docker/spark/Dockerfile .
 	docker build -t unidata-jupyter:$(BASE_TAG) -f docker/jupyter/Dockerfile .
-	docker build -t unidata-metabase:$(BASE_TAG) -f docker/metabase/Dockerfile .
 
 up:
 	docker compose up -d
