@@ -163,7 +163,7 @@ services:
   # Dremio CE; UI/REST na 9047, JDBC (direct protocol) na 31010
   dremio:
     image: dremio/dremio-oss:26.0.5
-    container_name: unidata_dremio
+    container_name: enidata_dremio
     ports:
       - "127.0.0.1:9047:9047"
       - "127.0.0.1:31010:31010"
@@ -177,6 +177,27 @@ services:
       interval: 15s
       retries: 20
       start_period: 120s
+
+  metabase:
+    image: unidata-metabase:4.1.2
+    build:
+      context: .
+      dockerfile: docker/metabase/Dockerfile
+    container_name: unidata_metabase
+    environment:
+      # H2 fica dentro do volume /metabase/data (padrao seria /metabase.db,
+      # que e layer efemera do container -> setup zerava a cada recriacao)
+      - MB_DB_FILE=/metabase/data/metabase.db
+      # rede do compose e privada (192.168.x): sem isso tanto o test/health do
+      # datasource (warehouse) quanto a configuracao de provider AI (LLM) sao
+      # bloqueados ("network Metabase is not allowed to connect to").
+      # allow-private = publicas + privadas, sem loopback/link-local.
+      - MB_WAREHOUSE_ALLOWED_NETWORKS=allow-private
+      - MB_LLM_ALLOWED_NETWORKS=allow-private
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - metabase_data:/metabase/data
 
   # registra o secret S3 (MinIO) no boot; o PUT re-executa sem efeito colateral
   # e || true deixa o boot idempotente
@@ -198,3 +219,4 @@ volumes:
   postgres_data:
   minio_data:
   dremio_data:
+  metabase_data:
