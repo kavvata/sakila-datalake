@@ -1,0 +1,18 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: cria-fact-rental-silver
+  namespace: airflow
+spec:
+  type: pysql
+  mode: client
+  image: unidata-spark:4.1.2
+  sparkVersion: "4.1.2"
+  mainApplicationFile: local:///opt/spark/scripts/silver/cria_fact_rental_silver.py
+  driver:
+    cores: 1
+    memory: 2g
+  executor:
+    cores: 1
+    memory: 2g
+    instances: 1
