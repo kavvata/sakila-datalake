@@ -653,39 +653,6 @@ wheels = [
 ]
 
 [[package]]
-name = "datalake-example"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "apache-airflow" },
-    { name = "pyspark" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "nbclient" },
-    { name = "nbconvert" },
-    { name = "nbformat" },
-    { name = "pyyaml" },
-    { name = "websocket-client" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "apache-airflow", specifier = ">=3.3.2" },
-    { name = "pyspark", specifier = ">=4.2.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "nbclient", specifier = ">=0.11.0" },
-    { name = "nbconvert", specifier = ">=7.17.1" },
-    { name = "nbformat", specifier = ">=5.10.4" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "websocket-client", specifier = ">=1.9.0" },
-]
-
-[[package]]
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2170,6 +2137,39 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/af/9e/418094adaee6b056ce199051b255448ed872829051e341b2294c80da0977/rpds_py-2026.9.1-cp315-cp315t-musllinux_1_2_x86_64.whl", hash = "sha256:1c2d1f6da5128eabf34e963d7163a818846075a52568250d006c4c953b40f903", size = 582764, upload-time = "2026-10-04T16:31:36.665Z" },
     { url = "https://files.pythonhosted.org/packages/3d/9b/1698ebf6b840ddfe8b472198abbed6ace35c6e398faeecd6c47dae742a4e/rpds_py-2026.9.1-cp315-cp315t-win32.whl", hash = "sha256:5c6ee90dee3e85e055ddfd502d611643d9b0fd94c818220bda84ec3dacd9b27b", size = 203795, upload-time = "2026-10-04T16:31:38.53Z" },
     { url = "https://files.pythonhosted.org/packages/8a/e2/91f70d804c61f8eac39a417e82aa1024f655ab9e8bdd7393b196242bc41b/rpds_py-2026.9.1-cp315-cp315t-win_amd64.whl", hash = "sha256:fe5ad0664ec772b02c45859041aa17655709cced7a31005817fbbbd988c25567", size = 223037, upload-time = "2026-10-04T16:31:40.468Z" },
+]
+
+[[package]]
+name = "sakila-datalake"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "apache-airflow" },
+    { name = "pyspark" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "nbclient" },
+    { name = "nbconvert" },
+    { name = "nbformat" },
+    { name = "pyyaml" },
+    { name = "websocket-client" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "apache-airflow", specifier = ">=3.3.2" },
+    { name = "pyspark", specifier = ">=4.2.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "nbclient", specifier = ">=0.11.0" },
+    { name = "nbconvert", specifier = ">=7.17.1" },
+    { name = "nbformat", specifier = ">=5.10.4" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "websocket-client", specifier = ">=1.9.0" },
 ]
 
 [[package]]

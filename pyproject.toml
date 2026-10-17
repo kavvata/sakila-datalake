@@ -1,5 +1,5 @@
 [project]
-name = "datalake-example"
+name = "sakila-datalake"
 version = "0.1.0"
 description = "Example project for a ELT pipeline using Airflow and Spark."
 readme = "README.md"

@@ -1,3 +1,7 @@
+# nome fixo do projeto: independe do nome da pasta clonada
+# (rede/volumes usam este prefixo — ver SPARK_JOB_NETWORK e Makefile)
+name: sakila-datalake
+
 services:
   airflow:
     build:
@@ -14,7 +18,7 @@ services:
       - UNIDATA_REPO_DIR=/opt/spark/work-dir
       # rede default do compose project; o job Spark resolve nessie/minio/
       # postgres por nome de servico (ver dags/utils/dev_spark_run.sh)
-      - SPARK_JOB_NETWORK=datalake-example_default
+      - SPARK_JOB_NETWORK=sakila-datalake_default
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
     ports:
       - "127.0.0.1:8080:8080"
