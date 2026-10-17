@@ -4,9 +4,10 @@ Extrai as 15 tabelas do sakila para o catalogo Nessie/Iceberg
 (schema ``bronze_sakila``) e carrega todos os CSVs do bucket ``raw``
 (MinIO) para o schema ``bronze_raw``. Em seguida monta a camada silver
 a partir do bronze sakila: ``dim_customer``, ``dim_staff``,
-``fact_payment`` e ``fact_rental`` (schema ``silver``). As escritas sao
-idempotentes (``createOrReplace``), entao cada execucao recria as tabelas
-sem duplicar.
+``fact_payment`` e ``fact_rental`` (schema ``silver``) e fecha com o KPI
+gold ``top3_customer_quarter`` (schema ``gold``): top 3 clientes por ano e
+trimestre. As escritas sao idempotentes (``createOrReplace``), entao cada
+execucao recria as tabelas sem duplicar.
 """
 
 from datetime import UTC, datetime
@@ -16,10 +17,10 @@ from utils.operators import get_spark_operator
 
 with DAG(
     dag_id="aplica_elt_sakila",
-    description="Aplica o ETL sakila: bronze (Postgres + raw CSV) e silver (dim/fact) no Nessie/Iceberg",
+    description="Aplica o ETL sakila: bronze (Postgres + raw CSV), silver (dim/fact) e gold (KPI top3) no Nessie/Iceberg",
     start_date=datetime(2026, 10, 14, tzinfo=UTC),
     catchup=False,
-    tags=["bronze", "silver", "sakila", "raw"],
+    tags=["bronze", "silver", "gold", "sakila", "raw"],
 ) as dag:
     # Etapa 1 — bronze: extracao do sakila (Postgres) e dos CSVs do bucket
     # 'raw'. Independentes entre si: rodam em paralelo.
@@ -60,6 +61,18 @@ with DAG(
         application_file="spark-apps/cria-fact-rental-silver.yaml",
     )
 
+    # Etapa 3 — gold: KPI a partir do silver. O namespace nao depende de
+    # nenhuma tarefa e roda em paralelo desde o inicio.
+    cria_namespace_gold = get_spark_operator(
+        task_id="cria_namespace_gold",
+        application_file="spark-apps/cria-namespace-gold.yaml",
+    )
+
+    cria_top3_customer_quarter_gold = get_spark_operator(
+        task_id="cria_top3_customer_quarter_gold",
+        application_file="spark-apps/cria-top3-customer-quarter-gold.yaml",
+    )
+
     # O silver depende da extracao do sakila (fonte dos dados) e do
     # namespace ja criado.
     extrai_sakila_bronze >> cria_namespace_silver >> [
@@ -68,3 +81,11 @@ with DAG(
         cria_fact_payment_silver,
         cria_fact_rental_silver,
     ]
+
+    # O KPI gold depende do namespace gold e das tabelas de origem
+    # (fact_payment + dim_customer).
+    [
+        cria_fact_payment_silver,
+        cria_dim_customer_silver,
+        cria_namespace_gold,
+    ] >> cria_top3_customer_quarter_gold
