@@ -7,7 +7,7 @@ Extrai as 15 tabelas do sakila para o catalogo Nessie/Iceberg
 (``createOrReplace``), entao cada execucao recria as tabelas sem duplicar.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from airflow import DAG
 from utils.operators import get_spark_operator
@@ -15,7 +15,7 @@ from utils.operators import get_spark_operator
 with DAG(
     dag_id="load_para_bronze",
     description="Extrai as tabelas sakila (Postgres) para a camada bronze (Nessie/Iceberg)",
-    start_date=datetime(2026, 10, 14, tzinfo=timezone.utc),
+    start_date=datetime(2026, 10, 14, tzinfo=UTC),
     catchup=False,
     tags=["bronze", "sakila", "raw"],
 ) as dag:
