@@ -178,7 +178,7 @@ services:
   # Dremio CE; UI/REST na 9047, JDBC (direct protocol) na 31010
   dremio:
     image: dremio/dremio-oss:26.0.5
-    container_name: enidata_dremio
+    container_name: unidata_dremio
     ports:
       - "127.0.0.1:9047:9047"
       - "127.0.0.1:31010:31010"
