@@ -11,8 +11,8 @@ spec:
   mainApplicationFile: local:///opt/spark/scripts/silver/cria_fact_payment_silver.py
   driver:
     cores: 1
-    memory: 2g
+    memory: 512m
   executor:
     cores: 1
-    memory: 2g
+    memory: 512m
     instances: 1

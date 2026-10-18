@@ -49,7 +49,7 @@ def cria_spark_session(app_name: str) -> "SparkSession":
         .config("spark.sql.catalog.nessie.warehouse", WAREHOUSE)
         .config("spark.sql.catalog.nessie.s3.endpoint", e["minio_endpoint"])
         .config("spark.sql.catalog.nessie.s3.path-style-access", "true")
-        .config("spark.driver.memory", "2g")
+        .config("spark.driver.memory", "512m")
         .getOrCreate()
     )
 

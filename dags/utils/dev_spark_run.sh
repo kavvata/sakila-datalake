@@ -22,7 +22,11 @@ TASK_ID="${TASK_ID:?TASK_ID environment variable is required}"
 SCRIPT_REL="${SCRIPT_REL:?SCRIPT_REL environment variable is required}"
 
 cd "$REPO_ROOT"
-if [ -f .env ]; then set -a; . ./.env; set +a; fi
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
 
 SPARK_IMAGE="${SPARK_IMAGE:-unidata-spark:4.1.2}"
 SPARK_MASTER="${SPARK_MASTER:-local[*]}"
@@ -39,8 +43,8 @@ SCRIPT_EXEC_REL="${SCRIPT_REL#scripts/}"
 # montado em /opt/spark/scripts; evita bind mount (caminho seria do host).
 docker volume rm "$VOL" >/dev/null 2>&1 || true
 docker volume create "$VOL" >/dev/null
-tar -C scripts -czf - . \
-  | docker run -i --rm -u 0 -v "$VOL:/staging" --entrypoint /usr/bin/tar "$SPARK_IMAGE" -C /staging -xz
+tar -C scripts -czf - . |
+  docker run -i --rm -u 0 -v "$VOL:/staging" --entrypoint /usr/bin/tar "$SPARK_IMAGE" -C /staging -xz
 
 docker run --rm \
   --network "$SPARK_JOB_NETWORK" \
@@ -71,6 +75,6 @@ docker run --rm \
   --conf spark.sql.catalog.nessie.warehouse=s3://warehouse/ \
   --conf spark.sql.catalog.nessie.s3.endpoint="$MINIO_ENDPOINT" \
   --conf spark.sql.catalog.nessie.s3.path-style-access=true \
-  --conf spark.driver.memory=2g \
+  --conf spark.driver.memory=512m \
   "/opt/spark/scripts/$SCRIPT_EXEC_REL"
 docker volume rm "$VOL" >/dev/null 2>&1 || true
