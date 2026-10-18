@@ -34,7 +34,7 @@ failure.
 
 ## Add a script to a DAG
 
-When asked `add <script> to <dag>` (e.g. `add scripts/gold/proplan/turmas/cria_tbl_matriculas_turma.ipynb to dags/gold/evasao/cria_indicadores_proplan.py`), follow these steps:
+When asked `add <script> to <dag>` (e.g. `add scripts/02_gold/proplan/turmas/cria_tbl_matriculas_turma.ipynb to dags/gold/evasao/cria_indicadores_proplan.py`), follow these steps:
 
 1. **Read both files** to understand the DAG structure and the script (Spark session name, source/target tables).
 

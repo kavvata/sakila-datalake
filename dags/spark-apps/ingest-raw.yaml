@@ -8,7 +8,7 @@ spec:
   mode: client
   image: unidata-spark:4.1.2
   sparkVersion: "4.1.2"
-  mainApplicationFile: local:///opt/spark/scripts/bronze/ingest_raw.py
+  mainApplicationFile: local:///opt/spark/scripts/00_bronze/ingest_raw.py
   driver:
     cores: 1
     memory: 512m

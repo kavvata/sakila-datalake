@@ -7,7 +7,7 @@ airflow).
 
 O script executado e o `spec.mainApplicationFile` do manifesto (.yaml)
 convertido para o caminho dentro do container
-(ex.: `local:///opt/spark/scripts/bronze/foo.py` -> `/opt/spark/scripts/bronze/foo.py`).
+(ex.: `local:///opt/spark/scripts/00_bronze/foo.py` -> `/opt/spark/scripts/00_bronze/foo.py`).
 O container do job entra na rede do compose (env `SPARK_JOB_NETWORK`) para
 resolver nessie/minio/postgres por nome de servico.
 """

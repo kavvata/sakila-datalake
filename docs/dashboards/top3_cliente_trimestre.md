@@ -1,7 +1,7 @@
 # Dashboard: Top 3 Clientes por Trimestre
 
 Metabase dashboard sobre a gold table `gold.top3_cliente_trimestre`
-(produzida por `scripts/gold/cria_top3_customer_quarter_gold.ipynb`,
+(produzida por `scripts/02_gold/cria_top3_customer_quarter_gold.ipynb`,
 catalogo Nessie, lido via Trino).
 
 Montado via MCP server do Metabase (server `local-mcp`). As instruções

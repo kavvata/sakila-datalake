@@ -7,9 +7,9 @@ wheels/
 *.egg-info
 
 # notebooks convertidos pelo entrypoint do airflow (nbconvert in place)
-scripts/bronze/**/*.py
-scripts/silver/**/*.py
-scripts/gold/**/*.py
+scripts/00_bronze/**/*.py
+scripts/01_silver/**/*.py
+scripts/02_gold/**/*.py
 
 # Virtual environments
 .venv

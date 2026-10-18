@@ -8,7 +8,7 @@ spec:
   mode: client
   image: unidata-spark:4.1.2
   sparkVersion: "4.1.2"
-  mainApplicationFile: local:///opt/spark/scripts/silver/cria_fact_payment_silver.py
+  mainApplicationFile: local:///opt/spark/scripts/01_silver/cria_fact_payment_silver.py
   driver:
     cores: 1
     memory: 512m

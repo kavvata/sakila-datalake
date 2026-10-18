@@ -8,7 +8,7 @@
 #
 # Required environment:
 #   TASK_ID     Airflow task id (names the scratch docker volume)
-#   SCRIPT_REL  main script path relative to the repo, e.g. scripts/bronze/foo.py
+#   SCRIPT_REL  main script path relative to the repo, e.g. scripts/00_bronze/foo.py
 #   REPO_ROOT   repo root to run from (default: ".")
 #
 # Optional environment (defaults below): SPARK_IMAGE SPARK_MASTER
@@ -39,7 +39,7 @@ NESSIE_REF="${NESSIE_REF:-dev}"
 VOL="unidata_spark_${TASK_ID}"
 SCRIPT_EXEC_REL="${SCRIPT_REL#scripts/}"
 
-# Copia o CONTEUDO de scripts/ (nucleo/, bronze/, ...) para o volume nomeado,
+# Copia o CONTEUDO de scripts/ (nucleo/, 00_bronze/, 01_silver/, 02_gold/) para o volume nomeado,
 # montado em /opt/spark/scripts; evita bind mount (caminho seria do host).
 docker volume rm "$VOL" >/dev/null 2>&1 || true
 docker volume create "$VOL" >/dev/null
