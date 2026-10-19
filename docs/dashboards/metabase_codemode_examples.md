@@ -163,8 +163,16 @@ const r = parse(await tools.mcp__sakila_metabase__question_write({
   dashboard_id: load("dash.id"),   // cria o card E o dashcard
   collection_id: null,
   display: "bar",
+  // eixo Y em USD: chaves de column_settings são ARRAYS JSON-encoded em string
+  visualization_settings: {
+    "column_settings": {
+      '["name","total_gasto"]': {
+        "number_style": "currency", "currency": "USD", "decimals": 2
+      }
+    }
+  },
   id: null, card_type: null, description: null,
-  visualization_settings: null, cache_ttl: null, column_metadata: null,
+  cache_ttl: null, column_metadata: null,
   archived: null, clear: null, collection_position: null
 }));
 store("card.bar", r.id);

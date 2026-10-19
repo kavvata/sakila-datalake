@@ -7,7 +7,7 @@ services:
     build:
       context: .
       dockerfile: docker/airflow/Dockerfile
-    container_name: unidata_airflow
+    container_name: sakila_airflow
     user: root
     environment:
       - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
@@ -51,7 +51,7 @@ services:
     build:
       context: .
       dockerfile: docker/jupyter/Dockerfile
-    container_name: unidata_jupyter
+    container_name: sakila_jupyter
     ports:
       - "127.0.0.1:8888:8888"
     working_dir: /opt/spark/work-dir
@@ -78,7 +78,7 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: unidata_postgres
+    container_name: sakila_postgres
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-sakila}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -109,7 +109,7 @@ services:
   # privado no pull 401, por isso o mirror comunitario pgsty/minio)
   minio:
     image: docker.io/pgsty/minio:RELEASE.2026-02-14T12-00-00Z
-    container_name: unidata_minio
+    container_name: sakila_minio
     command: server /data --console-address ":9001"
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-unidata}
@@ -130,7 +130,7 @@ services:
   # o boot idempotente
   create-warehouse:
     image: docker.io/pgsty/mc:RELEASE.2026-03-13T08-57-32Z
-    container_name: unidata_create_warehouse
+    container_name: sakila_create_warehouse
     depends_on:
       minio:
         condition: service_healthy
@@ -139,7 +139,7 @@ services:
   # espelha ./raw para o bucket 'raw' no boot; nao remove objetos extra no bucket
   sync-raw:
     image: docker.io/pgsty/mc:RELEASE.2026-03-13T08-57-32Z
-    container_name: unidata_sync_raw
+    container_name: sakila_sync_raw
     depends_on:
       minio:
         condition: service_healthy
@@ -149,7 +149,7 @@ services:
 
   nessie:
     image: ghcr.io/projectnessie/nessie:0.109.0
-    container_name: unidata_nessie
+    container_name: sakila_nessie
     depends_on:
       postgres:
         condition: service_healthy
@@ -178,7 +178,7 @@ services:
   # Dremio CE; UI/REST na 9047, JDBC (direct protocol) na 31010
   dremio:
     image: dremio/dremio-oss:26.0.5
-    container_name: unidata_dremio
+    container_name: sakila_dremio
     ports:
       - "127.0.0.1:9047:9047"
       - "127.0.0.1:31010:31010"
@@ -200,7 +200,7 @@ services:
   # como env (o catalogo usa ${ENV:}, resolvido pelo proprio Trino).
   trino:
     image: trinodb/trino:483
-    container_name: unidata_trino
+    container_name: sakila_trino
     # sem limite, o MaxRAMPercentage=80 do jvm.config da imagem pegaria 80%
     # da RAM do host (6G); 2G -> heap ~1.6G, suficiente p/ dev
     deploy:
@@ -228,7 +228,7 @@ services:
 
   metabase:
     image: metabase/metabase:v0.65.0.x
-    container_name: unidata_metabase
+    container_name: sakila_metabase
     environment:
       # H2 fica dentro do volume /metabase/data (padrao seria /metabase.db,
       # que e layer efemera do container -> setup zerava a cada recriacao)
@@ -248,7 +248,7 @@ services:
   # e || true deixa o boot idempotente
   dremio-secret:
     image: dremio/dremio-oss:26.0.5
-    container_name: unidata_dremio_secret
+    container_name: sakila_dremio_secret
     depends_on:
       dremio:
         condition: service_healthy

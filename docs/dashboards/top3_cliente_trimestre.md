@@ -11,7 +11,7 @@ dashcards) saem das próprias chamadas — use os retornos de cada passo
 nos seguintes.
 
 Resultado final: coleção raiz, 1 heading + 2 cards em largura total
-empilhados (bar graph em cima, tabela de ranking embaixo).
+empilhados (bar graph em cima, eixo Y em USD, tabela de ranking embaixo).
 
 ## Como chamar (pi + MCP nativo)
 
@@ -120,7 +120,11 @@ Salve como pergunta **dentro do dashboard**:
 ```
 question_write({method: "create", name: "Gasto dos top 1 clientes",
   query_handle: "<handle>", dashboard_id: <dash>,
-  display: "bar", <resto null>})
+  display: "bar",
+  visualization_settings: {"column_settings":
+    {'["name","total_gasto"]': {"number_style": "currency",
+      "currency": "USD", "decimals": 2}}},
+  <resto null>})
 ```
 
 ## Passo 4 — Card de tabela (ranking com medalhas)
@@ -201,8 +205,9 @@ get_content({items: [{type: "question", id: <card_bar>, fields: null},
 ```
 
 Confirme (em `results[]`): 3 dashcards (heading + 2 cards, `size_x: 24`,
-sem sobreposição) e as definições salvas: card de gasto com o filtro
-`ranking = 1` e card de ranking com `periodo`/`medalha`.
+sem sobreposição), as definições salvas: card de gasto com o filtro
+`ranking = 1` (e `visualization_settings.column_settings` com o eixo em
+USD) e card de ranking com `periodo`/`medalha`.
 
 ## Pegadinhas aprendidas (não pular)
 

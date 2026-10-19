@@ -36,7 +36,7 @@ MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-unidata}"
 MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-supersenha}"
 NESSIE_URI="${NESSIE_URI:-http://nessie:19120/api/v1}"
 NESSIE_REF="${NESSIE_REF:-dev}"
-VOL="unidata_spark_${TASK_ID}"
+VOL="sakila_spark_${TASK_ID}"
 SCRIPT_EXEC_REL="${SCRIPT_REL#scripts/}"
 
 # Copia o CONTEUDO de scripts/ (nucleo/, 00_bronze/, 01_silver/, 02_gold/) para o volume nomeado,
